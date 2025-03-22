@@ -9,3 +9,5 @@ htmlcov
 .DS_Store
 .env
 *.code-workspace
+
+node_modules/

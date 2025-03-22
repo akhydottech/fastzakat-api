@@ -20,18 +20,18 @@ test:
 # Example: make test-args ARGS="-x"
 .PHONY: test-args
 test-args:
-	poetry run pytest $(ARGS)
+	pytest $(ARGS)
 
 # Create a migration
 # Example: make migration MESSAGE="Add column last_name to User model"
 .PHONY: migration
 migration:
-	poetry run alembic revision --autogenerate -m "$(MESSAGE)"
+	alembic revision --autogenerate -m "$(MESSAGE)"
 
 # Apply migrations
 .PHONY: migrate
 migrate:
-	poetry run alembic upgrade head
+	alembic upgrade head
 
 
 # Run live reload server inside container
