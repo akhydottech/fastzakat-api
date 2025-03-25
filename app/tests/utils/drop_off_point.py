@@ -12,5 +12,6 @@ def create_random_drop_off_point(db: Session) -> DropOffPoint:
     assert owner_id is not None
     title = random_lower_string()
     description = random_lower_string()
-    drop_off_point_in = DropOffPointCreate(title=title, description=description)
+    address = random_lower_string()
+    drop_off_point_in = DropOffPointCreate(title=title, description=description, address=address)
     return crud.create_drop_off_point(session=db, drop_off_point_in=drop_off_point_in, owner_id=owner_id)
