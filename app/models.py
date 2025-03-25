@@ -61,7 +61,8 @@ class UsersPublic(SQLModel):
 # Shared properties
 class DropOffPointBase(SQLModel):
     title: str = Field(min_length=1, max_length=255)
-    description: str | None = Field(default=None, max_length=255)
+    description: str | None = Field(default=None)
+    address: str = Field(default=None)
 
 
 # Properties to receive on drop off point creation
