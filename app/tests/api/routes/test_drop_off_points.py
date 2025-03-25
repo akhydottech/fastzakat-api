@@ -22,6 +22,7 @@ def test_create_drop_off_point(
     assert content["description"] == data["description"]
     assert "id" in content
     assert "owner_id" in content
+    assert "owner_full_name" in content
 
 
 def test_read_drop_off_point(
@@ -38,7 +39,7 @@ def test_read_drop_off_point(
     assert content["description"] == drop_off_point.description
     assert content["id"] == str(drop_off_point.id)
     assert content["owner_id"] == str(drop_off_point.owner_id)
-
+    assert content["owner_full_name"] == drop_off_point.owner.full_name
 
 def test_read_drop_off_point_not_found(
     client: TestClient, superuser_token_headers: dict[str, str]
@@ -95,7 +96,7 @@ def test_update_drop_off_point(
     assert content["description"] == data["description"]
     assert content["id"] == str(drop_off_point.id)
     assert content["owner_id"] == str(drop_off_point.owner_id)
-
+    assert content["owner_full_name"] == drop_off_point.owner.full_name 
 
 def test_update_drop_off_point_not_found(
     client: TestClient, superuser_token_headers: dict[str, str]
