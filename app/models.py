@@ -1,3 +1,4 @@
+from typing import List, Optional
 import uuid
 
 from pydantic import EmailStr
@@ -60,7 +61,8 @@ class UsersPublic(SQLModel):
 # Shared properties
 class DropOffPointBase(SQLModel):
     title: str = Field(min_length=1, max_length=255)
-    description: str | None = Field(default=None, max_length=255)
+    description: str | None = Field(default=None)
+    address: str = Field(default=None)
 
 
 # Properties to receive on drop off point creation
@@ -114,3 +116,40 @@ class TokenPayload(SQLModel):
 class NewPassword(SQLModel):
     token: str
     new_password: str = Field(min_length=8, max_length=40)
+
+# Address model
+
+class AddressProperties(SQLModel):
+    label: Optional[str] = None
+    score: Optional[float] = None
+    id: Optional[str] = None
+    name: Optional[str] = None
+    postcode: Optional[str] = None
+    citycode: Optional[str] = None
+    x: Optional[float] = None
+    y: Optional[float] = None
+    city: Optional[str] = None
+    context: Optional[str] = None
+    type: Optional[str] = None
+    importance: Optional[float] = None
+    banId: Optional[str] = None
+    oldcitycode: Optional[str] = None
+    oldcity: Optional[str] = None
+
+class AddressGeometry(SQLModel):
+    type: Optional[str] = None
+    coordinates: List[float]
+
+class AddressFeature(SQLModel):
+    type: Optional[str] = None
+    geometry: Optional[AddressGeometry] = None
+    properties: Optional[AddressProperties] = None
+
+class AddressResponse(SQLModel):
+    type: Optional[str] = None
+    version: Optional[str] = None
+    features: Optional[List[AddressFeature]] = None
+    attribution: Optional[str] = None
+    licence: Optional[str] = None
+    query: Optional[str] = None
+    limit: Optional[int] = None

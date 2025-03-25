@@ -45,6 +45,7 @@ def read_drop_off_points(
             id=drop_off_point.id,
             title=drop_off_point.title,
             description=drop_off_point.description,
+            address=drop_off_point.address,
             owner_id=drop_off_point.owner_id,
             owner_full_name=drop_off_point.owner.full_name if drop_off_point.owner else None
         )
@@ -68,6 +69,7 @@ def read_drop_off_point(session: SessionDep, current_user: CurrentUser, id: uuid
         id=drop_off_point.id,
         title=drop_off_point.title,
         description=drop_off_point.description,
+        address=drop_off_point.address,
         owner_id=drop_off_point.owner_id,
         owner_full_name=drop_off_point.owner.full_name if drop_off_point.owner else None
     )
@@ -88,6 +90,7 @@ def create_drop_off_point(
         id=drop_off_point.id,
         title=drop_off_point.title,
         description=drop_off_point.description,
+        address=drop_off_point.address,
         owner_id=drop_off_point.owner_id,
         owner_full_name=current_user.full_name
     )
@@ -118,6 +121,7 @@ def update_drop_off_point(
         id=drop_off_point.id,
         title=drop_off_point.title,
         description=drop_off_point.description,
+        address=drop_off_point.address,
         owner_id=drop_off_point.owner_id,
         owner_full_name=drop_off_point.owner.full_name if drop_off_point.owner else None
     )

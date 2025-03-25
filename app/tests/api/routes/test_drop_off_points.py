@@ -10,7 +10,7 @@ from app.tests.utils.drop_off_point import create_random_drop_off_point
 def test_create_drop_off_point(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
-    data = {"title": "Foo", "description": "Fighters"}
+    data = {"title": "Foo", "description": "Fighters", "address": "123 Main St"}
     response = client.post(
         f"{settings.API_V1_STR}/drop-off-points/",
         headers=superuser_token_headers,
@@ -20,6 +20,7 @@ def test_create_drop_off_point(
     content = response.json()
     assert content["title"] == data["title"]
     assert content["description"] == data["description"]
+    assert content["address"] == data["address"]
     assert "id" in content
     assert "owner_id" in content
     assert "owner_full_name" in content
@@ -37,6 +38,7 @@ def test_read_drop_off_point(
     content = response.json()
     assert content["title"] == drop_off_point.title
     assert content["description"] == drop_off_point.description
+    assert content["address"] == drop_off_point.address
     assert content["id"] == str(drop_off_point.id)
     assert content["owner_id"] == str(drop_off_point.owner_id)
     assert content["owner_full_name"] == drop_off_point.owner.full_name
@@ -84,7 +86,7 @@ def test_update_drop_off_point(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
     drop_off_point = create_random_drop_off_point(db)
-    data = {"title": "Updated title", "description": "Updated description"}
+    data = {"title": "Updated title", "description": "Updated description", "address": "Updated address"}
     response = client.put(
         f"{settings.API_V1_STR}/drop-off-points/{drop_off_point.id}",
         headers=superuser_token_headers,
@@ -94,6 +96,7 @@ def test_update_drop_off_point(
     content = response.json()
     assert content["title"] == data["title"]
     assert content["description"] == data["description"]
+    assert content["address"] == data["address"]
     assert content["id"] == str(drop_off_point.id)
     assert content["owner_id"] == str(drop_off_point.owner_id)
     assert content["owner_full_name"] == drop_off_point.owner.full_name 
@@ -101,7 +104,7 @@ def test_update_drop_off_point(
 def test_update_drop_off_point_not_found(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
-    data = {"title": "Updated title", "description": "Updated description"}
+    data = {"title": "Updated title", "description": "Updated description", "address": "Updated address"}
     response = client.put(
         f"{settings.API_V1_STR}/drop-off-points/{uuid.uuid4()}",
         headers=superuser_token_headers,
@@ -116,7 +119,7 @@ def test_update_drop_off_point_not_enough_permissions(
     client: TestClient, normal_user_token_headers: dict[str, str], db: Session
 ) -> None:
     drop_off_point = create_random_drop_off_point(db)
-    data = {"title": "Updated title", "description": "Updated description"}
+    data = {"title": "Updated title", "description": "Updated description", "address": "Updated address"}
     response = client.put(
         f"{settings.API_V1_STR}/drop-off-points/{drop_off_point.id}",
         headers=normal_user_token_headers,
