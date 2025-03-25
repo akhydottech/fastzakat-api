@@ -38,7 +38,19 @@ def read_drop_off_points(
         )
         drop_off_points = session.exec(statement).all()
 
-    return DropOffPointsPublic(data=drop_off_points, count=count)
+    # Convert to DropOffPointPublic with owner_full_name
+    public_drop_off_points = []
+    for drop_off_point in drop_off_points:
+        public_point = DropOffPointPublic(
+            id=drop_off_point.id,
+            title=drop_off_point.title,
+            description=drop_off_point.description,
+            owner_id=drop_off_point.owner_id,
+            owner_full_name=drop_off_point.owner.full_name if drop_off_point.owner else None
+        )
+        public_drop_off_points.append(public_point)
+
+    return DropOffPointsPublic(data=public_drop_off_points, count=count)
 
 
 @router.get("/{id}", response_model=DropOffPointPublic)
@@ -51,7 +63,14 @@ def read_drop_off_point(session: SessionDep, current_user: CurrentUser, id: uuid
         raise HTTPException(status_code=404, detail="Drop off point not found")
     if not current_user.is_superuser and (drop_off_point.owner_id != current_user.id):
         raise HTTPException(status_code=400, detail="Not enough permissions")
-    return drop_off_point
+    
+    return DropOffPointPublic(
+        id=drop_off_point.id,
+        title=drop_off_point.title,
+        description=drop_off_point.description,
+        owner_id=drop_off_point.owner_id,
+        owner_full_name=drop_off_point.owner.full_name if drop_off_point.owner else None
+    )
 
 
 @router.post("/", response_model=DropOffPointPublic)
@@ -65,7 +84,13 @@ def create_drop_off_point(
     session.add(drop_off_point)
     session.commit()
     session.refresh(drop_off_point)
-    return drop_off_point
+    return DropOffPointPublic(
+        id=drop_off_point.id,
+        title=drop_off_point.title,
+        description=drop_off_point.description,
+        owner_id=drop_off_point.owner_id,
+        owner_full_name=current_user.full_name
+    )
 
 
 @router.put("/{id}", response_model=DropOffPointPublic)
@@ -89,7 +114,13 @@ def update_drop_off_point(
     session.add(drop_off_point)
     session.commit()
     session.refresh(drop_off_point)
-    return drop_off_point
+    return DropOffPointPublic(
+        id=drop_off_point.id,
+        title=drop_off_point.title,
+        description=drop_off_point.description,
+        owner_id=drop_off_point.owner_id,
+        owner_full_name=drop_off_point.owner.full_name if drop_off_point.owner else None
+    )
 
 
 @router.delete("/{id}")

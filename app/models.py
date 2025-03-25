@@ -87,6 +87,7 @@ class DropOffPoint(DropOffPointBase, table=True):
 class DropOffPointPublic(DropOffPointBase):
     id: uuid.UUID
     owner_id: uuid.UUID
+    owner_full_name: str | None = None
 
 
 class DropOffPointsPublic(SQLModel):
