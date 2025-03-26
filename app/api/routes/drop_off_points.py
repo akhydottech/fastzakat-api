@@ -6,13 +6,17 @@ from sqlmodel import func, select
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models import DropOffPoint, DropOffPointCreate, DropOffPointPublic, DropOffPointsPublic, DropOffPointUpdate, Message
+from app.utils import address_search
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/drop-off-points", tags=["drop-off-points"])
 
 
 @router.get("/", response_model=DropOffPointsPublic)
 def read_drop_off_points(
-    session: SessionDep, current_user: CurrentUser, skip: int = 0, limit: int = 100
+    session: SessionDep, current_user: CurrentUser, skip: int = 0, limit: int = 100, use_pagination: bool = True
 ) -> Any:
     """
     Retrieve drop off points.
@@ -33,9 +37,9 @@ def read_drop_off_points(
         statement = (
             select(DropOffPoint)
             .where(DropOffPoint.owner_id == current_user.id)
-            .offset(skip)
-            .limit(limit)
         )
+        if use_pagination:
+            statement = statement.offset(skip).limit(limit)
         drop_off_points = session.exec(statement).all()
 
     # Convert to DropOffPointPublic with owner_full_name
@@ -47,7 +51,9 @@ def read_drop_off_points(
             description=drop_off_point.description,
             address=drop_off_point.address,
             owner_id=drop_off_point.owner_id,
-            owner_full_name=drop_off_point.owner.full_name if drop_off_point.owner else None
+            owner_full_name=drop_off_point.owner.full_name if drop_off_point.owner else None,
+            latitude=drop_off_point.latitude,
+            longitude=drop_off_point.longitude
         )
         public_drop_off_points.append(public_point)
 
@@ -71,7 +77,9 @@ def read_drop_off_point(session: SessionDep, current_user: CurrentUser, id: uuid
         description=drop_off_point.description,
         address=drop_off_point.address,
         owner_id=drop_off_point.owner_id,
-        owner_full_name=drop_off_point.owner.full_name if drop_off_point.owner else None
+        owner_full_name=drop_off_point.owner.full_name if drop_off_point.owner else None,
+        latitude=drop_off_point.latitude,
+        longitude=drop_off_point.longitude
     )
 
 
@@ -82,6 +90,20 @@ def create_drop_off_point(
     """
     Create new drop off point.
     """
+    longitude, latitude = None, None
+    try:
+        if drop_off_point_in.address:
+            coordinates = address_search(drop_off_point_in.address).features[0].geometry.coordinates
+            longitude, latitude = coordinates
+            drop_off_point_in.longitude = longitude
+            drop_off_point_in.latitude = latitude
+        else:
+            drop_off_point_in.longitude = None
+            drop_off_point_in.latitude = None
+            
+    except Exception as e:
+        logger.error(f"Error creating drop off point: {e}")
+
     drop_off_point = DropOffPoint.model_validate(drop_off_point_in, update={"owner_id": current_user.id})
     session.add(drop_off_point)
     session.commit()
@@ -92,7 +114,9 @@ def create_drop_off_point(
         description=drop_off_point.description,
         address=drop_off_point.address,
         owner_id=drop_off_point.owner_id,
-        owner_full_name=current_user.full_name
+        owner_full_name=current_user.full_name,
+        latitude=drop_off_point.latitude,
+        longitude=drop_off_point.longitude
     )
 
 
@@ -113,6 +137,20 @@ def update_drop_off_point(
     if not current_user.is_superuser and (drop_off_point.owner_id != current_user.id):
         raise HTTPException(status_code=400, detail="Not enough permissions")
     update_dict = drop_off_point_in.model_dump(exclude_unset=True)
+    longitude, latitude = None, None
+    try:
+        if drop_off_point.address:
+            address_search_result = address_search(drop_off_point_in.address).features[0]
+            coordinates = address_search_result.geometry.coordinates
+            longitude, latitude = coordinates
+            update_dict["latitude"] = latitude
+            update_dict["longitude"] = longitude
+        else:
+            update_dict["latitude"] = None
+            update_dict["longitude"] = None
+    except Exception as e:
+        logger.error(f"Error updating drop off point: {e}")
+
     drop_off_point.sqlmodel_update(update_dict)
     session.add(drop_off_point)
     session.commit()
@@ -123,7 +161,9 @@ def update_drop_off_point(
         description=drop_off_point.description,
         address=drop_off_point.address,
         owner_id=drop_off_point.owner_id,
-        owner_full_name=drop_off_point.owner.full_name if drop_off_point.owner else None
+        owner_full_name=drop_off_point.owner.full_name if drop_off_point.owner else None,
+        latitude=drop_off_point.latitude,
+        longitude=drop_off_point.longitude
     )
 
 
