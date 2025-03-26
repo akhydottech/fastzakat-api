@@ -16,7 +16,7 @@ router = APIRouter(prefix="/drop-off-points", tags=["drop-off-points"])
 
 @router.get("/", response_model=DropOffPointsPublic)
 def read_drop_off_points(
-    session: SessionDep, current_user: CurrentUser, skip: int = 0, limit: int = 100
+    session: SessionDep, current_user: CurrentUser, skip: int = 0, limit: int = 100, use_pagination: bool = True
 ) -> Any:
     """
     Retrieve drop off points.
@@ -37,9 +37,9 @@ def read_drop_off_points(
         statement = (
             select(DropOffPoint)
             .where(DropOffPoint.owner_id == current_user.id)
-            .offset(skip)
-            .limit(limit)
         )
+        if use_pagination:
+            statement = statement.offset(skip).limit(limit)
         drop_off_points = session.exec(statement).all()
 
     # Convert to DropOffPointPublic with owner_full_name
@@ -92,8 +92,8 @@ def create_drop_off_point(
     """
     longitude, latitude = None, None
     try:
-        if drop_off_point.address:
-            coordinates = address_search(drop_off_point.address).features[0].geometry.coordinates
+        if drop_off_point_in.address:
+            coordinates = address_search(drop_off_point_in.address).features[0].geometry.coordinates
             longitude, latitude = coordinates
             drop_off_point_in.longitude = longitude
             drop_off_point_in.latitude = latitude
@@ -140,7 +140,8 @@ def update_drop_off_point(
     longitude, latitude = None, None
     try:
         if drop_off_point.address:
-            coordinates = address_search(drop_off_point.address).features[0].geometry.coordinates
+            address_search_result = address_search(drop_off_point_in.address).features[0]
+            coordinates = address_search_result.geometry.coordinates
             longitude, latitude = coordinates
             update_dict["latitude"] = latitude
             update_dict["longitude"] = longitude
@@ -149,7 +150,6 @@ def update_drop_off_point(
             update_dict["longitude"] = None
     except Exception as e:
         logger.error(f"Error updating drop off point: {e}")
-
 
     drop_off_point.sqlmodel_update(update_dict)
     session.add(drop_off_point)
