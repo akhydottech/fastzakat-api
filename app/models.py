@@ -62,7 +62,9 @@ class UsersPublic(SQLModel):
 class DropOffPointBase(SQLModel):
     title: str = Field(min_length=1, max_length=255)
     description: str | None = Field(default=None)
-    address: str = Field(default=None)
+    address: str | None = Field(default=None)
+    latitude: float | None = Field(default=None)
+    longitude: float | None = Field(default=None)
 
 
 # Properties to receive on drop off point creation
@@ -83,6 +85,8 @@ class DropOffPoint(DropOffPointBase, table=True):
         foreign_key="user.id", nullable=False, ondelete="CASCADE"
     )
     owner: User | None = Relationship(back_populates="dropOffPoints")
+    latitude: float | None = Field(default=None)
+    longitude: float | None = Field(default=None)
 
 
 # Properties to return via API, id is always required
