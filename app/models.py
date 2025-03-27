@@ -34,6 +34,7 @@ class UserUpdate(UserBase):
 class UserUpdateMe(SQLModel):
     full_name: str | None = Field(default=None, max_length=255)
     email: EmailStr | None = Field(default=None, max_length=255)
+    is_organization: bool | None = Field(default=None)
 
 
 class UpdatePassword(SQLModel):
@@ -46,6 +47,31 @@ class User(UserBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str
     dropOffPoints: list["DropOffPoint"] = Relationship(back_populates="owner", cascade_delete=True)
+    organization_memberships: list["MemberOf"] = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "[MemberOf.organization_id]", "cascade": "all, delete-orphan"},
+        back_populates="organization",
+    )
+    member_of_organizations: list["MemberOf"] = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "[MemberOf.member_id]", "cascade": "all, delete-orphan"},
+        back_populates="member"
+    )
+
+class MemberOfBase(SQLModel):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    organization_id: uuid.UUID = Field(foreign_key="user.id")
+    member_id: uuid.UUID = Field(foreign_key="user.id")
+    is_pending: bool = Field(default=True)
+
+
+class MemberOf(MemberOfBase, table=True):
+    organization: User = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "[MemberOf.organization_id]"},
+        back_populates="organization_memberships"
+    )
+    member: User = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "[MemberOf.member_id]"},
+        back_populates="member_of_organizations"
+    )
 
 
 # Properties to return via API, id is always required
@@ -55,6 +81,31 @@ class UserPublic(UserBase):
 
 class UsersPublic(SQLModel):
     data: list[UserPublic]
+    count: int
+
+
+class MemberInfo(UserPublic):
+    is_pending: bool
+
+
+class MembersResponse(SQLModel):
+    data: list[MemberInfo]
+    count: int
+
+class InvitationsResponse(SQLModel):
+    data: list[MemberOf]
+    count: int
+
+class OrganizationMembershipResponse(SQLModel):
+    id: uuid.UUID
+    organization_id: uuid.UUID
+    email: str
+    member_id: uuid.UUID
+    is_pending: bool
+    organization_name: str | None = None
+
+class OrganizationMembershipsResponse(SQLModel):
+    data: list[OrganizationMembershipResponse]
     count: int
 
 
