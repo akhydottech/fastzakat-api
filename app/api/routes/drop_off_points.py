@@ -72,7 +72,8 @@ def read_drop_off_points(
             owner_full_name=drop_off_point.owner.full_name if drop_off_point.owner else None,
             latitude=drop_off_point.latitude,
             longitude=drop_off_point.longitude,
-            responsible_id=drop_off_point.responsible_id
+            responsible_id=drop_off_point.responsible_id,
+            is_done=drop_off_point.is_done
         )
         public_drop_off_points.append(public_point)
 
@@ -87,7 +88,19 @@ def read_drop_off_point(session: SessionDep, current_user: CurrentUser, id: uuid
     drop_off_point = session.get(DropOffPoint, id)
     if not drop_off_point:
         raise HTTPException(status_code=404, detail="Drop off point not found")
-    if not current_user.is_superuser and (drop_off_point.owner_id != current_user.id):
+
+    is_responsible = False
+    if drop_off_point.responsible_id:
+        member = session.exec(
+            select(MemberOf).where(
+                MemberOf.id == drop_off_point.responsible_id,
+                MemberOf.member_id == current_user.id,
+                MemberOf.is_pending == False
+            )
+        ).first()
+        is_responsible = member is not None
+
+    if not current_user.is_superuser and (drop_off_point.owner_id != current_user.id) and (not is_responsible):
         raise HTTPException(status_code=400, detail="Not enough permissions")
     
     return DropOffPointPublic(
@@ -98,7 +111,9 @@ def read_drop_off_point(session: SessionDep, current_user: CurrentUser, id: uuid
         owner_id=drop_off_point.owner_id,
         owner_full_name=drop_off_point.owner.full_name if drop_off_point.owner else None,
         latitude=drop_off_point.latitude,
-        longitude=drop_off_point.longitude
+        longitude=drop_off_point.longitude,
+        responsible_id=drop_off_point.responsible_id,
+        is_done=drop_off_point.is_done
     )
 
 
@@ -232,3 +247,35 @@ def delete_drop_off_point(
     session.delete(drop_off_point)
     session.commit()
     return Message(message="Drop off point deleted successfully")
+
+@router.post("/{id}/done")
+def set_drop_off_point_done(
+    session: SessionDep, current_user: CurrentUser, id: uuid.UUID, is_done: bool
+) -> Message:
+    """
+    Set a drop off point as done.
+    """
+
+    drop_off_point = session.get(DropOffPoint, id)
+    is_responsible = False
+    if drop_off_point.responsible_id:
+        member = session.exec(
+            select(MemberOf).where(
+                MemberOf.id == drop_off_point.responsible_id,
+                MemberOf.member_id == current_user.id,
+                MemberOf.is_pending == False
+            )
+        ).first()
+        is_responsible = member is not None
+
+    if not drop_off_point:
+        raise HTTPException(status_code=404, detail="Drop off point not found")
+
+    if not current_user.is_superuser and (drop_off_point.owner_id != current_user.id) and (not is_responsible):
+        raise HTTPException(status_code=400, detail="Not enough permissions")
+
+    drop_off_point.is_done = is_done
+    session.add(drop_off_point)
+    session.commit()
+    session.refresh(drop_off_point)
+    return Message(message=f"Drop off point set {'done' if is_done else 'not done'}")

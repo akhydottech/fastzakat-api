@@ -118,7 +118,7 @@ class DropOffPointBase(SQLModel):
     latitude: float | None = Field(default=None)
     longitude: float | None = Field(default=None)
     responsible_id: Optional[uuid.UUID] = Field(default=None)
-
+    is_done: bool | None = Field(default=False)
 
 # Properties to receive on drop off point creation
 class DropOffPointCreate(DropOffPointBase):
@@ -144,6 +144,7 @@ class DropOffPoint(DropOffPointBase, table=True):
     owner: User | None = Relationship(back_populates="dropOffPoints")
     latitude: float | None = Field(default=None)
     longitude: float | None = Field(default=None)
+    is_done: bool | None = Field(default=False)
 
 
 # Properties to return via API, id is always required
