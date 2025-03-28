@@ -25,7 +25,9 @@ def test_invite_user_to_organization(
         params={"email": user_to_invite.email}
     )
     assert r.status_code == 200
-    assert r.json() is True
+    response_json = r.json()
+    assert response_json["email"] == user_to_invite.email
+    assert response_json["is_pending"] is True
 
 
 def test_invite_nonexistent_user(
@@ -122,9 +124,18 @@ def test_delete_member(
     )
     assert r.status_code == 200
     
+    # Get members to get the MemberOf ID
+    r = client.get(
+        f"{settings.API_V1_STR}/organizations/members",
+        headers=org_headers
+    )
+    assert r.status_code == 200
+    response = r.json()
+    member_of_id = response["data"][0]["id"]
+    
     # Delete member
     r = client.delete(
-        f"{settings.API_V1_STR}/organizations/members/{user_to_invite.id}",
+        f"{settings.API_V1_STR}/organizations/members/{member_of_id}",
         headers=org_headers
     )
     assert r.status_code == 200

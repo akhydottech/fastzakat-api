@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 from sqlmodel import func, select
 
 from app.api.deps import CurrentUser, SessionDep
-from app.models import DropOffPoint, DropOffPointCreate, DropOffPointPublic, DropOffPointsPublic, DropOffPointUpdate, Message
+from app.models import DropOffPoint, DropOffPointCreate, DropOffPointPublic, DropOffPointsPublic, DropOffPointUpdate, MemberOf, Message
 from app.utils import address_search
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -21,22 +21,40 @@ def read_drop_off_points(
     """
     Retrieve drop off points.
     """
-
     if current_user.is_superuser:
         count_statement = select(func.count()).select_from(DropOffPoint)
         count = session.exec(count_statement).one()
         statement = select(DropOffPoint).offset(skip).limit(limit)
         drop_off_points = session.exec(statement).all()
     else:
+        # Get drop-off points where user is owner OR responsible through MemberOf
         count_statement = (
             select(func.count())
             .select_from(DropOffPoint)
-            .where(DropOffPoint.owner_id == current_user.id)
+            .where(
+                (DropOffPoint.owner_id == current_user.id) |
+                (DropOffPoint.responsible_id.in_(
+                    select(MemberOf.id)
+                    .where(
+                        MemberOf.member_id == current_user.id,
+                        MemberOf.is_pending == False
+                    )
+                ))
+            )
         )
         count = session.exec(count_statement).one()
         statement = (
             select(DropOffPoint)
-            .where(DropOffPoint.owner_id == current_user.id)
+            .where(
+                (DropOffPoint.owner_id == current_user.id) |
+                (DropOffPoint.responsible_id.in_(
+                    select(MemberOf.id)
+                    .where(
+                        MemberOf.member_id == current_user.id,
+                        MemberOf.is_pending == False
+                    )
+                ))
+            )
         )
         if use_pagination:
             statement = statement.offset(skip).limit(limit)
@@ -53,7 +71,8 @@ def read_drop_off_points(
             owner_id=drop_off_point.owner_id,
             owner_full_name=drop_off_point.owner.full_name if drop_off_point.owner else None,
             latitude=drop_off_point.latitude,
-            longitude=drop_off_point.longitude
+            longitude=drop_off_point.longitude,
+            responsible_id=drop_off_point.responsible_id
         )
         public_drop_off_points.append(public_point)
 
@@ -103,6 +122,19 @@ def create_drop_off_point(
             
     except Exception as e:
         logger.error(f"Error creating drop off point: {e}")
+    member = None
+    if current_user.is_organization:
+        if drop_off_point_in.responsible_id:
+            member = session.exec(
+                select(MemberOf).where(
+                    MemberOf.organization_id == current_user.id,
+                    MemberOf.id == drop_off_point_in.responsible_id,
+                    MemberOf.is_pending == False
+                )
+            ).first()
+            
+            if not member:
+                raise HTTPException(status_code=404, detail="Member not found in organization")
 
     drop_off_point = DropOffPoint.model_validate(drop_off_point_in, update={"owner_id": current_user.id})
     session.add(drop_off_point)
@@ -116,7 +148,8 @@ def create_drop_off_point(
         owner_id=drop_off_point.owner_id,
         owner_full_name=current_user.full_name,
         latitude=drop_off_point.latitude,
-        longitude=drop_off_point.longitude
+        longitude=drop_off_point.longitude,
+        responsible_id=drop_off_point.responsible_id
     )
 
 
@@ -150,6 +183,23 @@ def update_drop_off_point(
             update_dict["longitude"] = None
     except Exception as e:
         logger.error(f"Error updating drop off point: {e}")
+    
+    member = None
+
+    if current_user.is_organization:
+        if update_dict["responsible_id"]:
+            member = session.exec(
+                select(MemberOf).where(
+                    MemberOf.organization_id == current_user.id,
+                    MemberOf.id == update_dict["responsible_id"],
+                    MemberOf.is_pending == False
+                )
+            ).first()
+            
+            if not member:
+                raise HTTPException(status_code=404, detail="Member not found in organization")
+        else:
+            update_dict["responsible_id"] = None
 
     drop_off_point.sqlmodel_update(update_dict)
     session.add(drop_off_point)
@@ -163,9 +213,9 @@ def update_drop_off_point(
         owner_id=drop_off_point.owner_id,
         owner_full_name=drop_off_point.owner.full_name if drop_off_point.owner else None,
         latitude=drop_off_point.latitude,
-        longitude=drop_off_point.longitude
+        longitude=drop_off_point.longitude,
+        responsible_id=drop_off_point.responsible_id
     )
-
 
 @router.delete("/{id}")
 def delete_drop_off_point(
