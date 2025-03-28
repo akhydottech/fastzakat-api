@@ -7,7 +7,7 @@ from app.api.deps import (
     CurrentUser,
     SessionDep,
 )
-from app.models import MemberOf, OrganizationMembershipsResponse, OrganizationMembershipResponse
+from app.models import DropOffPoint, MemberOf, OrganizationMembershipsResponse, OrganizationMembershipResponse
 
 router = APIRouter(prefix="/members", tags=["members"])
 
@@ -88,6 +88,18 @@ def delete_organization(
         raise HTTPException(status_code=404, detail="Member not found")
     
     member = member[0]
+
+    drop_off_points = session.exec(
+        select(DropOffPoint).where(
+            DropOffPoint.responsible_id == member.id
+        )
+    ).all()
+
+    for drop_off_point in drop_off_points:
+        drop_off_point = drop_off_point[0]
+        drop_off_point.responsible_id = None
+        session.add(drop_off_point)
+
     session.delete(member)
     session.commit()
     return True

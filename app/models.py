@@ -72,6 +72,7 @@ class MemberOf(MemberOfBase, table=True):
         sa_relationship_kwargs={"foreign_keys": "[MemberOf.member_id]"},
         back_populates="member_of_organizations"
     )
+    dropOffPoints: list["DropOffPoint"] = Relationship(back_populates="responsible", cascade_delete=True)
 
 
 # Properties to return via API, id is always required
@@ -116,6 +117,7 @@ class DropOffPointBase(SQLModel):
     address: str | None = Field(default=None)
     latitude: float | None = Field(default=None)
     longitude: float | None = Field(default=None)
+    responsible_id: Optional[uuid.UUID] = Field(default=None)
 
 
 # Properties to receive on drop off point creation
@@ -135,6 +137,10 @@ class DropOffPoint(DropOffPointBase, table=True):
     owner_id: uuid.UUID = Field(
         foreign_key="user.id", nullable=False, ondelete="CASCADE"
     )
+    responsible_id: uuid.UUID | None = Field(
+        foreign_key="memberof.id", nullable=True, ondelete="CASCADE"
+    ) 
+    responsible: MemberOf | None = Relationship(back_populates="dropOffPoints")
     owner: User | None = Relationship(back_populates="dropOffPoints")
     latitude: float | None = Field(default=None)
     longitude: float | None = Field(default=None)
