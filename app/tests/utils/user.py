@@ -26,6 +26,12 @@ def create_random_user(db: Session) -> User:
     user = crud.create_user(session=db, user_create=user_in)
     return user
 
+def create_random_organization(db: Session) -> User:
+    email = random_email()
+    password = random_lower_string()
+    organization_in = UserCreate(email=email, password=password, is_organization=True)
+    organization = crud.create_user(session=db, user_create=organization_in)
+    return organization
 
 def authentication_token_from_email(
     *, client: TestClient, email: str, db: Session
